@@ -17,8 +17,8 @@ const SubmitComplaint: React.FC = () => {
   const [formData, setFormData] = useState({
     heading: '',
     description: '',
-    isAnonymous: false,
-    isPublic: false,
+    anonymous: false,   // ✅ match schema
+    public: false,      // ✅ match schema
   });
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +36,7 @@ const SubmitComplaint: React.FC = () => {
     setLoading(true);
 
     try {
+      // ✅ Use schema-compatible field names
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.STUDENT_COMPLAINTS}`, {
         method: 'POST',
         headers: {
@@ -43,8 +44,11 @@ const SubmitComplaint: React.FC = () => {
           Authorization: `Bearer ${localStorage.getItem('userToken')}`,
         },
         body: JSON.stringify({
-          ...formData,
-          studentId: localStorage.getItem('userId'),
+          student_id: localStorage.getItem('userId'),
+          heading: formData.heading,
+          description: formData.description,
+          anonymous: formData.anonymous,
+          public: formData.public,
         }),
       });
 
@@ -133,8 +137,8 @@ const SubmitComplaint: React.FC = () => {
               <div className="space-y-2">
                 <Label>Anonymous Submission</Label>
                 <Select
-                  value={formData.isAnonymous ? 'true' : 'false'}
-                  onValueChange={(value) => setFormData({ ...formData, isAnonymous: value === 'true' })}
+                  value={formData.anonymous ? 'true' : 'false'}
+                  onValueChange={(value) => setFormData({ ...formData, anonymous: value === 'true' })}
                 >
                   <SelectTrigger className="bg-background/50">
                     <SelectValue />
@@ -148,11 +152,11 @@ const SubmitComplaint: React.FC = () => {
 
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  id="isPublic"
-                  checked={formData.isPublic}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isPublic: !!checked })}
+                  id="public"
+                  checked={formData.public}
+                  onCheckedChange={(checked) => setFormData({ ...formData, public: !!checked })}
                 />
-                <Label htmlFor="isPublic" className="text-sm">
+                <Label htmlFor="public" className="text-sm">
                   Make this complaint public (visible to other students)
                 </Label>
               </div>

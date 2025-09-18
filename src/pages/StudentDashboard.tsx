@@ -14,13 +14,14 @@ interface ComplaintStats {
   inProgress: number;
 }
 
+// ✅ Updated interface to match DB schema (snake_case in DB, converted in frontend)
 interface PublicComplaint {
-  id: string;
+  id: number;
   heading: string;
   description: string;
   status: string;
-  createdAt: string;
-  isAnonymous: boolean;
+  createdAt: string;   // mapped from created_at
+  isAnonymous: boolean; // mapped from anonymous
 }
 
 const StudentDashboard: React.FC = () => {
@@ -33,36 +34,56 @@ const StudentDashboard: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch complaint stats - using student's own complaints endpoint
       const userId = localStorage.getItem('userId');
-      const statsResponse = await fetch(`${API_BASE_URL}${API_ENDPOINTS.STUDENT_COMPLAINT_BY_ID(userId)}`, {
-        headers: {
-          ...DEFAULT_HEADERS,
-          Authorization: `Bearer ${localStorage.getItem('userToken')}`,
-        },
-      });
+
+      // ✅ Fetch student’s own complaints
+      const statsResponse = await fetch(
+        `${API_BASE_URL}${API_ENDPOINTS.STUDENT_COMPLAINT_BY_ID(userId || '')}`,
+        {
+          headers: {
+            ...DEFAULT_HEADERS,
+            Authorization: `Bearer ${localStorage.getItem('userToken')}`,
+          },
+        }
+      );
 
       if (statsResponse.ok) {
         const userComplaints = await statsResponse.json();
+
+        // userComplaints will have snake_case (created_at, anonymous, public)
         const total = userComplaints.length;
         const pending = userComplaints.filter((c: any) => c.status === 'pending').length;
         const resolved = userComplaints.filter((c: any) => c.status === 'resolved').length;
         const inProgress = userComplaints.filter((c: any) => c.status === 'in_progress').length;
-        
+
         setStats({ total, pending, resolved, inProgress });
       }
 
-      // Fetch public complaints
-      const publicResponse = await fetch(`${API_BASE_URL}${API_ENDPOINTS.STUDENT_COMPLAINTS}?public=true&limit=5`, {
-        headers: {
-          ...DEFAULT_HEADERS,
-          Authorization: `Bearer ${localStorage.getItem('userToken')}`,
-        },
-      });
+      // ✅ Fetch recent public complaints (limit 5)
+      const publicResponse = await fetch(
+        `${API_BASE_URL}${API_ENDPOINTS.STUDENT_COMPLAINTS}?public=true&limit=5`,
+        {
+          headers: {
+            ...DEFAULT_HEADERS,
+            Authorization: `Bearer ${localStorage.getItem('userToken')}`,
+          },
+        }
+      );
 
       if (publicResponse.ok) {
         const publicData = await publicResponse.json();
-        setPublicComplaints(publicData);
+
+        // ✅ Map DB fields → frontend fields
+        const normalized = publicData.map((c: any) => ({
+          id: c.id,
+          heading: c.heading,
+          description: c.description,
+          status: c.status,
+          createdAt: c.created_at,       // map snake_case → camelCase
+          isAnonymous: c.anonymous,      // map snake_case → camelCase
+        }));
+
+        setPublicComplaints(normalized);
       }
     } catch (error) {
       toast({
@@ -78,7 +99,7 @@ const StudentDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    
+
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
       setRefreshing(true);
@@ -90,17 +111,23 @@ const StudentDashboard: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'resolved': return 'bg-green-500/20 text-green-400';
-      case 'in_progress': return 'bg-yellow-500/20 text-yellow-400';
-      default: return 'bg-orange-500/20 text-orange-400';
+      case 'resolved':
+        return 'bg-green-500/20 text-green-400';
+      case 'in_progress':
+        return 'bg-yellow-500/20 text-yellow-400';
+      default:
+        return 'bg-orange-500/20 text-orange-400';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'resolved': return <CheckCircle className="w-4 h-4" />;
-      case 'in_progress': return <Clock className="w-4 h-4" />;
-      default: return <TrendingUp className="w-4 h-4" />;
+      case 'resolved':
+        return <CheckCircle className="w-4 h-4" />;
+      case 'in_progress':
+        return <Clock className="w-4 h-4" />;
+      default:
+        return <TrendingUp className="w-4 h-4" />;
     }
   };
 
@@ -117,8 +144,9 @@ const StudentDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
+          {/* ✅ Fix: Show logged-in student's name instead of admin */}
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Student Dashboard
+            Welcome, {localStorage.getItem("userName") || "Student"}
           </h1>
           <p className="text-muted-foreground">Manage your complaints and track their progress</p>
         </div>
@@ -149,7 +177,7 @@ const StudentDashboard: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-gradient-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
@@ -161,7 +189,7 @@ const StudentDashboard: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-gradient-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
@@ -173,7 +201,7 @@ const StudentDashboard: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-gradient-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
@@ -240,9 +268,6 @@ const StudentDashboard: React.FC = () => {
                         <span className="text-xs text-muted-foreground">
                           {new Date(complaint.createdAt).toLocaleDateString()}
                         </span>
-                        {complaint.isAnonymous && (
-                          <Badge variant="secondary" className="text-xs">Anonymous</Badge>
-                        )}
                       </div>
                     </div>
                   </div>

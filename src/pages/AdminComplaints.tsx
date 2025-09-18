@@ -4,9 +4,15 @@ import { Button } from '@/components/ui/enhanced-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, FileText, Clock, CheckCircle, TrendingUp, RefreshCw, Save } from 'lucide-react';
-import { API_BASE_URL, API_ENDPOINTS, DEFAULT_HEADERS } from '@/config';
+import { ArrowLeft, FileText, Clock, CheckCircle, TrendingUp, RefreshCw } from 'lucide-react';
+import { API_BASE_URL, DEFAULT_HEADERS } from '@/config';
 import { useToast } from '@/hooks/use-toast';
+
+// ✅ Backend endpoints (matches your FastAPI app)
+const ENDPOINTS = {
+  ADMIN_COMPLAINTS: '/admin/complaints',
+  ADMIN_UPDATE_COMPLAINT: (id: string | number) => `/admin/complaints/${id}`,
+};
 
 interface Complaint {
   id: string;
@@ -30,7 +36,7 @@ const AdminComplaints: React.FC = () => {
 
   const fetchComplaints = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.ADMIN_COMPLAINTS}`, {
+      const response = await fetch(`${API_BASE_URL}${ENDPOINTS.ADMIN_COMPLAINTS}`, {
         headers: {
           ...DEFAULT_HEADERS,
           Authorization: `Bearer ${localStorage.getItem('userToken')}`,
@@ -39,19 +45,37 @@ const AdminComplaints: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setComplaints(data);
+        // Map DB snake_case -> UI camelCase the component expects
+        const mapped: Complaint[] = (data || []).map((c: any) => ({
+          id: String(c.id),
+          heading: c.heading,
+          description: c.description,
+          status: c.status, // expects: pending | in_progress | resolved
+          isAnonymous: !!c.anonymous,
+          isPublic: !!c.public,
+          studentId: String(c.student_id),
+          createdAt: c.created_at,
+          // schema has no updated_at; initialize to created_at
+          updatedAt: c.updated_at ?? c.created_at,
+        }));
+        setComplaints(mapped);
       } else {
+        let msg = 'Failed to fetch complaints';
+        try {
+          const err = await response.json();
+          if (err?.detail) msg = err.detail;
+        } catch {}
         toast({
-          title: "Error",
-          description: "Failed to fetch complaints",
-          variant: "destructive",
+          title: 'Error',
+          description: msg,
+          variant: 'destructive',
         });
       }
     } catch (error) {
       toast({
-        title: "Connection Error",
-        description: "Please check your network connection",
-        variant: "destructive",
+        title: 'Connection Error',
+        description: 'Please check your network connection',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -62,12 +86,13 @@ const AdminComplaints: React.FC = () => {
   const updateComplaintStatus = async (complaintId: string, newStatus: string) => {
     setUpdatingStatus(complaintId);
     try {
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.ADMIN_UPDATE_COMPLAINT(complaintId)}`, {
+      const response = await fetch(`${API_BASE_URL}${ENDPOINTS.ADMIN_UPDATE_COMPLAINT(complaintId)}`, {
         method: 'PUT',
         headers: {
           ...DEFAULT_HEADERS,
           Authorization: `Bearer ${localStorage.getItem('userToken')}`,
         },
+        // ✅ Backend expects lowercase: pending | in_progress | resolved
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -78,21 +103,29 @@ const AdminComplaints: React.FC = () => {
             : complaint
         ));
         toast({
-          title: "Success",
-          description: "Complaint status updated successfully",
+          title: 'Success',
+          description: 'Complaint status updated successfully',
         });
       } else {
+        let msg = 'Failed to update complaint status';
+        try {
+          const err = await response.json();
+          if (err?.detail) msg = err.detail;
+        } catch {
+          const txt = await response.text();
+          if (txt) msg = txt;
+        }
         toast({
-          title: "Error",
-          description: "Failed to update complaint status",
-          variant: "destructive",
+          title: 'Error',
+          description: msg,
+          variant: 'destructive',
         });
       }
     } catch (error) {
       toast({
-        title: "Connection Error",
-        description: "Please check your network connection",
-        variant: "destructive",
+        title: 'Connection Error',
+        description: 'Please check your network connection',
+        variant: 'destructive',
       });
     } finally {
       setUpdatingStatus(null);
@@ -101,6 +134,7 @@ const AdminComplaints: React.FC = () => {
 
   useEffect(() => {
     fetchComplaints();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getStatusColor = (status: string) => {

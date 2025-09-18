@@ -9,7 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { API_BASE_URL, API_ENDPOINTS, DEFAULT_HEADERS } from '@/config';
 
 const StudentLogin: React.FC = () => {
-  const [studentId, setStudentId] = useState('');
+  // Backend expects email, not studentId
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -24,23 +25,24 @@ const StudentLogin: React.FC = () => {
         method: 'POST',
         headers: DEFAULT_HEADERS,
         body: JSON.stringify({
-          studentId,
+          email,     // 👈 must be email
           password,
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
+        // Save backend response values
         localStorage.setItem('userToken', data.token || 'demo-token');
         localStorage.setItem('userType', 'student');
-        localStorage.setItem('userName', data.name || studentId);
-        localStorage.setItem('userId', data.id || studentId);
-        
+        localStorage.setItem('userName', data.name || email);
+        localStorage.setItem('userId', String(data.id)); // backend returns numeric id
+
         toast({
           title: "Login Successful",
           description: "Welcome to your student dashboard!",
         });
-        
+
         navigate('/student/dashboard');
       } else {
         const error = await response.text();
@@ -86,13 +88,13 @@ const StudentLogin: React.FC = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="studentId">Student ID</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="studentId"
-                type="text"
-                placeholder="Enter your student ID"
-                value={studentId}
-                onChange={(e) => setStudentId(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="Enter your university email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="bg-background/50"
               />

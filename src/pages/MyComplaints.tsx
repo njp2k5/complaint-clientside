@@ -28,7 +28,7 @@ const MyComplaints: React.FC = () => {
   const fetchComplaints = async () => {
     try {
       const userId = localStorage.getItem('userId');
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.STUDENT_COMPLAINT_BY_ID(userId)}`, {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.STUDENT_COMPLAINT_BY_ID(userId || '')}`, {
         headers: {
           ...DEFAULT_HEADERS,
           Authorization: `Bearer ${localStorage.getItem('userToken')}`,
@@ -150,10 +150,6 @@ const MyComplaints: React.FC = () => {
                   {complaint.description}
                 </p>
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>
-                    Submitted: {new Date(complaint.createdAt).toLocaleDateString()} at{' '}
-                    {new Date(complaint.createdAt).toLocaleTimeString()}
-                  </span>
                   {complaint.updatedAt !== complaint.createdAt && (
                     <span>
                       Updated: {new Date(complaint.updatedAt).toLocaleDateString()}

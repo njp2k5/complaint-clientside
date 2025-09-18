@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; 
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/enhanced-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import { FileText, BarChart3, Clock, CheckCircle, TrendingUp, RefreshCw, Download } from 'lucide-react';
 import { API_BASE_URL, API_ENDPOINTS, DEFAULT_HEADERS } from '@/config';
 import { useToast } from '@/hooks/use-toast';
+import ReactMarkdown from 'react-markdown'; // ✅ added
 
 interface ComplaintStats {
   total: number;
@@ -52,12 +52,29 @@ const AdminDashboard: React.FC = () => {
         const inProgress = complaints.filter((c: any) => c.status === 'in_progress').length;
         
         setStats({ total, pending, resolved, inProgress });
-        
-        // Get recent public complaints (last 5)
-        const recentPublic = complaints
-          .filter((c: any) => c.isPublic)
-          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 5);
+      }
+
+      // ✅ Fetch recent public complaints
+      const publicResp = await fetch(
+        `${API_BASE_URL}${API_ENDPOINTS.STUDENT_COMPLAINTS}?public=true&limit=5`,
+        {
+          headers: {
+            ...DEFAULT_HEADERS,
+            Authorization: `Bearer ${localStorage.getItem('userToken')}`,
+          },
+        }
+      );
+
+      if (publicResp.ok) {
+        const publicData = await publicResp.json();
+        const recentPublic: PublicComplaint[] = (publicData || []).map((c: any) => ({
+          id: String(c.id),
+          heading: c.heading,
+          description: c.description,
+          status: c.status,
+          createdAt: c.created_at,
+          isAnonymous: true,
+        }));
         setPublicComplaints(recentPublic);
       }
     } catch (error) {
@@ -85,7 +102,8 @@ const AdminDashboard: React.FC = () => {
 
       if (response.ok) {
         const reportData = await response.json();
-        setReport(reportData.report || JSON.stringify(reportData, null, 2));
+        // ✅ use report_text (from backend)
+        setReport(reportData.report_text || '');
         toast({
           title: "Success",
           description: "Report generated successfully",
@@ -110,13 +128,10 @@ const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    
-    // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
       setRefreshing(true);
       fetchDashboardData();
     }, 30000);
-
     return () => clearInterval(interval);
   }, []);
 
@@ -269,12 +284,10 @@ const AdminDashboard: React.FC = () => {
             <CardDescription>Latest complaint analysis and statistics</CardDescription>
           </CardHeader>
           <CardContent>
-            <Textarea
-              value={report}
-              readOnly
-              rows={10}
-              className="bg-background/50 font-mono text-sm"
-            />
+            {/* ✅ Markdown rendering */}
+            <div className="prose prose-sm max-w-none">
+              <ReactMarkdown>{report}</ReactMarkdown>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -312,9 +325,6 @@ const AdminDashboard: React.FC = () => {
                         <span className="text-xs text-muted-foreground">
                           {new Date(complaint.createdAt).toLocaleDateString()}
                         </span>
-                        {complaint.isAnonymous && (
-                          <Badge variant="secondary" className="text-xs">Anonymous</Badge>
-                        )}
                       </div>
                     </div>
                   </div>

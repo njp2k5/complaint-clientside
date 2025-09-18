@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { API_BASE_URL, API_ENDPOINTS, DEFAULT_HEADERS } from '@/config';
 
 const AdminLogin: React.FC = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState(''); // 👈 changed from username → email
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ const AdminLogin: React.FC = () => {
         method: 'POST',
         headers: DEFAULT_HEADERS,
         body: JSON.stringify({
-          username,
+          email,     // 👈 backend expects email
           password,
         }),
       });
@@ -33,13 +33,13 @@ const AdminLogin: React.FC = () => {
         const data = await response.json();
         localStorage.setItem('userToken', data.token || 'demo-admin-token');
         localStorage.setItem('userType', 'admin');
-        localStorage.setItem('userName', data.name || username);
-        
+        localStorage.setItem('userName', data.name || email);
+
         toast({
           title: "Login Successful",
           description: "Welcome to the admin dashboard!",
         });
-        
+
         navigate('/admin/dashboard');
       } else {
         const error = await response.text();
@@ -85,13 +85,13 @@ const AdminLogin: React.FC = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label> {/* 👈 changed label */}
               <Input
-                id="username"
-                type="text"
-                placeholder="Enter admin username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="Enter admin email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="bg-background/50"
               />
