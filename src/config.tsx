@@ -1,5 +1,5 @@
 // Backend API Configuration
-export const API_BASE_URL = "https://web-production-89a82.up.railway.app"; // 👈 no trailing slash
+export const API_BASE_URL = "https://complaint-serverside.onrender.com/"; // 👈 no trailing slash
 
 // API Endpoints
 export const API_ENDPOINTS = {
